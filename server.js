@@ -23,15 +23,23 @@ const walletRoutes = require('./routes/walletRoutes');
 const app = express();
 const server = http.createServer(app);
 
+// CORS_ORIGIN can be '*' (allow all), a single URL, or multiple comma-separated URLs
+// e.g. CORS_ORIGIN=https://prinsgo-customer.vercel.app,https://prinsgo-driver.vercel.app,https://prinsgo-admin.vercel.app
+const rawOrigins = process.env.CORS_ORIGIN || '*';
+const corsOrigin =
+  rawOrigins === '*'
+    ? '*'
+    : rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+
 const io = new Server(server, {
-  cors: { origin: process.env.CORS_ORIGIN || '*', methods: ['GET', 'POST'] },
+  cors: { origin: corsOrigin, methods: ['GET', 'POST'] },
 });
 
 // Connect to MongoDB
 connectDB();
 
 // Middleware
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'production') {
