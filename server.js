@@ -23,8 +23,12 @@ const walletRoutes = require('./routes/walletRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// CORS_ORIGIN can be '*' (allow all), a single URL, or multiple comma-separated URLs
-// e.g. CORS_ORIGIN=https://prinsgo-customer.vercel.app,https://prinsgo-driver.vercel.app,https://prinsgo-admin.vercel.app
+
+// ✅🔥 MOST IMPORTANT FIX (Render proxy issue)
+app.set('trust proxy', 1);
+
+
+// CORS
 const rawOrigins = process.env.CORS_ORIGIN || '*';
 const corsOrigin =
   rawOrigins === '*'
@@ -35,32 +39,52 @@ const io = new Server(server, {
   cors: { origin: corsOrigin, methods: ['GET', 'POST'] },
 });
 
-// Connect to MongoDB
+// DB connect
 connectDB();
+
 
 // Middleware
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting - prevents abuse on OTP and general APIs
+
+// ✅ FIXED RATE LIMIT (proxy safe)
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 200,
-  message: { success: false, message: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
 app.use('/api', apiLimiter);
 
+
+// OTP limiter
 const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
+  windowMs: 10 * 60 * 1000,
   max: 5,
-  message: { success: false, message: 'Too many OTP requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many OTP requests, try later' },
 });
+
 app.use('/api/auth/send-otp', otpLimiter);
 app.use('/api/driver/auth/send-otp', otpLimiter);
+
+
+// ✅ TEST ROUTE (VERY IMPORTANT)
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'PrinsGo API Running 🚀',
+  });
+});
+
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -76,15 +100,17 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/wallet', walletRoutes);
 
+
+// Root check
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'PrinsGo API is running' });
+  res.json({ success: true, message: 'PrinsGo Backend Running 🚀' });
 });
 
-// Socket.IO - live driver location + ride/parcel status updates
+
+// Socket.IO
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // Driver joins a room per ride/parcel to broadcast live location
   socket.on('join_ride_room', (rideId) => {
     socket.join(`ride_${rideId}`);
   });
@@ -105,11 +131,14 @@ io.on('connection', (socket) => {
 
 app.set('io', io);
 
-// Error handling (must be last)
+
+// Error handling
 app.use(notFound);
 app.use(errorHandler);
 
+
+// Server start
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`PrinsGo backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`PrinsGo backend running on port ${PORT}`);
 });
