@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
-const { createOtp, verifyOtp, sendOtpSms } = require('../utils/otpService');
+const { createOtp, checkOtp, consumeOtp, sendOtpSms } = require('../utils/otpService');
 
 // @desc    Send OTP to phone for login/register
 // @route   POST /api/auth/send-otp
@@ -37,7 +37,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Phone and OTP code are required' });
     }
 
-    const result = await verifyOtp(phone, code, 'login');
+    const result = await checkOtp(phone, code, 'login');
     if (!result.valid) {
       return res.status(400).json({ success: false, message: result.message });
     }
@@ -53,6 +53,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
           isNewUser: true,
         });
       }
+      await consumeOtp(result.record);
       user = await User.create({
         phone,
         name,
@@ -61,6 +62,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
       });
       isNewUser = true;
     } else {
+      await consumeOtp(result.record);
       if (user.isBlocked) {
         return res.status(403).json({ success: false, message: 'Your account has been blocked' });
       }
