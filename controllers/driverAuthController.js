@@ -1,6 +1,6 @@
 const Driver = require('../models/Driver');
 const generateToken = require('../utils/generateToken');
-const { createOtp, verifyOtp, sendOtpSms } = require('../utils/otpService');
+const { createOtp, checkOtp, consumeOtp, sendOtpSms } = require('../utils/otpService');
 
 const VALID_VEHICLES = ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van'];
 
@@ -37,7 +37,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Phone and OTP code are required' });
     }
 
-    const result = await verifyOtp(phone, code, 'login');
+    const result = await checkOtp(phone, code, 'login');
     if (!result.valid) {
       return res.status(400).json({ success: false, message: result.message });
     }
@@ -57,6 +57,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'Invalid vehicle type' });
       }
 
+      await consumeOtp(result.record);
       driver = await Driver.create({
         phone,
         name,
@@ -66,6 +67,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
       });
       isNewDriver = true;
     } else {
+      await consumeOtp(result.record);
       if (driver.isBlocked) {
         return res.status(403).json({ success: false, message: 'Your account has been blocked' });
       }
