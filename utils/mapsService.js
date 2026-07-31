@@ -1,8 +1,5 @@
 // utils/mapsService.js
 
-const fetch = require("node-fetch");
-
-// Get Google API Key
 const getApiKey = () => {
   const apiKey = process.env.GOOGLE_API_KEY;
 
@@ -13,7 +10,7 @@ const getApiKey = () => {
   return apiKey;
 };
 
-// Get Driving Distance & Duration
+// Get driving distance & duration
 const getDistanceAndDuration = async (
   originLat,
   originLng,
@@ -34,9 +31,7 @@ const getDistanceAndDuration = async (
   const element = data.rows[0].elements[0];
 
   if (element.status !== "OK") {
-    throw new Error(
-      "Could not calculate route between the given points"
-    );
+    throw new Error("Could not calculate route between the given points");
   }
 
   return {
@@ -55,15 +50,13 @@ const reverseGeocode = async (lat, lng) => {
   const data = await response.json();
 
   if (data.status !== "OK" || !data.results.length) {
-    throw new Error(
-      "Could not resolve address for given coordinates"
-    );
+    throw new Error("Could not resolve address for given coordinates");
   }
 
   return data.results[0].formatted_address;
 };
 
-// Search Places
+// Places Autocomplete
 const searchPlaces = async (input, lat, lng) => {
   const apiKey = getApiKey();
 
@@ -78,13 +71,8 @@ const searchPlaces = async (input, lat, lng) => {
   const response = await fetch(url);
   const data = await response.json();
 
-  if (
-    data.status !== "OK" &&
-    data.status !== "ZERO_RESULTS"
-  ) {
-    throw new Error(
-      `Google Places API error: ${data.status}`
-    );
+  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+    throw new Error(`Google Places API error: ${data.status}`);
   }
 
   return data.predictions || [];
@@ -100,9 +88,7 @@ const getPlaceDetails = async (placeId) => {
   const data = await response.json();
 
   if (data.status !== "OK") {
-    throw new Error(
-      `Google Place Details error: ${data.status}`
-    );
+    throw new Error(`Google Place Details error: ${data.status}`);
   }
 
   return {
