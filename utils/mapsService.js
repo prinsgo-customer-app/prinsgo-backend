@@ -10,7 +10,9 @@ const getApiKey = () => {
   return apiKey;
 };
 
-// Get driving distance & duration
+// ===============================
+// Distance Matrix
+// ===============================
 const getDistanceAndDuration = async (
   originLat,
   originLng,
@@ -19,50 +21,79 @@ const getDistanceAndDuration = async (
 ) => {
   const apiKey = getApiKey();
 
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originLat},${originLng}&destinations=${destLat},${destLng}&key=${apiKey}`;
+  const url =
+    `https://maps.googleapis.com/maps/api/distancematrix/json` +
+    `?origins=${originLat},${originLng}` +
+    `&destinations=${destLat},${destLng}` +
+    `&key=${apiKey}`;
 
   const response = await fetch(url);
   const data = await response.json();
 
+  console.log("Distance Matrix Response:", data);
+
   if (data.status !== "OK") {
-    throw new Error(`Google Maps API error: ${data.status}`);
+    throw new Error(
+      `Google Distance Matrix Error: ${data.status} - ${
+        data.error_message || "Unknown Error"
+      }`
+    );
   }
 
   const element = data.rows[0].elements[0];
 
   if (element.status !== "OK") {
-    throw new Error("Could not calculate route between the given points");
+    throw new Error(element.status);
   }
 
   return {
-    distanceKm: Math.round((element.distance.value / 1000) * 10) / 10,
+    distanceKm: +(element.distance.value / 1000).toFixed(1),
     durationMin: Math.round(element.duration.value / 60),
   };
 };
 
+// ===============================
 // Reverse Geocoding
+// ===============================
 const reverseGeocode = async (lat, lng) => {
   const apiKey = getApiKey();
 
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+  const url =
+    `https://maps.googleapis.com/maps/api/geocode/json` +
+    `?latlng=${lat},${lng}` +
+    `&key=${apiKey}`;
 
   const response = await fetch(url);
   const data = await response.json();
 
-  if (data.status !== "OK" || !data.results.length) {
-    throw new Error("Could not resolve address for given coordinates");
+  console.log("Geocode Response:", data);
+
+  if (data.status !== "OK") {
+    throw new Error(
+      `Google Geocoding Error: ${data.status} - ${
+        data.error_message || "Unknown Error"
+      }`
+    );
+  }
+
+  if (!data.results.length) {
+    throw new Error("No address found");
   }
 
   return data.results[0].formatted_address;
 };
 
+// ===============================
 // Places Autocomplete
+// ===============================
 const searchPlaces = async (input, lat, lng) => {
   const apiKey = getApiKey();
 
-  let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-    input
-  )}&key=${apiKey}&components=country:in`;
+  let url =
+    `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
+    `?input=${encodeURIComponent(input)}` +
+    `&components=country:in` +
+    `&key=${apiKey}`;
 
   if (lat && lng) {
     url += `&location=${lat},${lng}&radius=30000`;
@@ -71,24 +102,42 @@ const searchPlaces = async (input, lat, lng) => {
   const response = await fetch(url);
   const data = await response.json();
 
+  console.log("Places API Response:", JSON.stringify(data, null, 2));
+
   if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-    throw new Error(`Google Places API error: ${data.status}`);
+    throw new Error(
+      `Google Places API Error: ${data.status} - ${
+        data.error_message || "Unknown Error"
+      }`
+    );
   }
 
   return data.predictions || [];
 };
 
+// ===============================
 // Place Details
+// ===============================
 const getPlaceDetails = async (placeId) => {
   const apiKey = getApiKey();
 
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,geometry&key=${apiKey}`;
+  const url =
+    `https://maps.googleapis.com/maps/api/place/details/json` +
+    `?place_id=${placeId}` +
+    `&fields=formatted_address,geometry` +
+    `&key=${apiKey}`;
 
   const response = await fetch(url);
   const data = await response.json();
 
+  console.log("Place Details Response:", data);
+
   if (data.status !== "OK") {
-    throw new Error(`Google Place Details error: ${data.status}`);
+    throw new Error(
+      `Google Place Details Error: ${data.status} - ${
+        data.error_message || "Unknown Error"
+      }`
+    );
   }
 
   return {
