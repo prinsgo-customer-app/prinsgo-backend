@@ -1,72 +1,49 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const Driver = require('../models/Driver');
+const User = require('../models/User'); // अगर आपके मॉडल का नाम Customer है, तो '../models/Customer' करें
 
-// Protect customer routes
-const protectCustomer = async (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Not authorized, token missing' });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let token;
 
-    if (decoded.role !== 'customer') {
-      return res.status(403).json({ success: false, message: 'Access denied for this role' });
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
-    const user = await User.findById(decoded.id).select('-__v');
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to access this route. Token missing.',
+      });
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'your_fallback_secret'
+    );
+
+    const user = await User.findById(decoded.id || decoded._id).select(
+      '-password'
+    );
+
     if (!user) {
-      return res.status(401).json({ success: false, message: 'User not found' });
-    }
-    if (user.isBlocked) {
-      return res.status(403).json({ success: false, message: 'Your account has been blocked' });
+      return res.status(401).json({
+        success: false,
+        message: 'The user belonging to this token no longer exists.',
+      });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized. Invalid or expired token.',
+      error: error.message,
+    });
   }
 };
 
-// Protect driver routes
-const protectDriver = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Not authorized, token missing' });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (decoded.role !== 'driver') {
-      return res.status(403).json({ success: false, message: 'Access denied for this role' });
-    }
-
-    const driver = await Driver.findById(decoded.id).select('-__v');
-    if (!driver) {
-      return res.status(401).json({ success: false, message: 'Driver not found' });
-    }
-    if (driver.isBlocked) {
-      return res.status(403).json({ success: false, message: 'Your account has been blocked' });
-    }
-
-    req.driver = driver;
-    next();
-  } catch (error) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
-  }
-};
-
-// Admin route protection
-const protectAdmin = (req, res, next) => {
-  const secret = req.headers['x-admin-secret'];
-  if (!secret || secret !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(403).json({ success: false, message: 'Admin access denied' });
-  }
-  next();
-};
-
-module.exports = { protectCustomer, protectDriver, protectAdmin };
+module.exports = { protect };
