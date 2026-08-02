@@ -2,9 +2,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Driver = require('../models/Driver');
 
+<<<<<<< HEAD
 // ==========================
 // Customer Authentication
 // ==========================
+>>>>>>> ffbb129 (Fix auth middleware and ride routes)
 const protectCustomer = async (req, res, next) => {
   try {
     let token;
@@ -52,9 +54,15 @@ const protectCustomer = async (req, res, next) => {
   }
 };
 
+<<<<<<< HEAD
 // ==========================
 // Driver Authentication
 // ==========================
+=======
+// ===============================
+// Driver Authentication
+// ===============================
+>>>>>>> ffbb129 (Fix auth middleware and ride routes)
 const protectDriver = async (req, res, next) => {
   try {
     let token;
@@ -102,9 +110,15 @@ const protectDriver = async (req, res, next) => {
   }
 };
 
+<<<<<<< HEAD
 // ==========================
 // Admin Authentication
 // ==========================
+=======
+// ===============================
+// Admin Authentication
+// ===============================
+>>>>>>> ffbb129 (Fix auth middleware and ride routes)
 const protectAdmin = (req, res, next) => {
   const secret = req.headers['x-admin-secret'];
 
