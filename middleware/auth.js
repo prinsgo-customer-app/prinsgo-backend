@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // अगर आपके मॉडल का नाम Customer है, तो '../models/Customer' करें
+const User = require('../models/User'); // Adjust path to your Customer/User model if named differently
 
 const protect = async (req, res, next) => {
   try {
