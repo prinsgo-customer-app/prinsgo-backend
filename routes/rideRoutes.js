@@ -8,41 +8,31 @@ const {
   getRideById,
   getRideHistory,
   cancelRide,
-  rateRide
+  rateRide,
 } = require('../controllers/rideController');
-
-
-// ❌ अभी के लिए हटाया गया
-// const { protectCustomer } = require('../middleware/auth');
-// router.use(protectCustomer);
-
 
 // Estimate fare
 router.post('/estimate', estimateFare);
 
+// Book ride (new route)
+router.post('/book', bookRide);
 
-// Create booking
+// Backward compatibility (old app)
 router.post('/create', bookRide);
-
 
 // Active ride
 router.get('/active', getActiveRide);
 
-
 // Ride history
 router.get('/history/:userId', getRideHistory);
 
-
-// Get single ride
+// Single ride
 router.get('/:id', getRideById);
-
 
 // Cancel ride
 router.put('/:id/cancel', cancelRide);
 
-
-// Rating
+// Rate ride
 router.post('/:id/rate', rateRide);
-
 
 module.exports = router;
