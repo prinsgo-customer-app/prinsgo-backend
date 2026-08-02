@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
+// 1. auth.js से protect मिडलवेयर इंपोर्ट करें
+const { protect } = require('../middleware/auth');
+
+// 2. controllers इंपोर्ट करें
 const {
   estimateFare,
   bookRide,
@@ -11,28 +15,25 @@ const {
   rateRide,
 } = require('../controllers/rideController');
 
-// Estimate fare
+// Estimate fare (बिना auth या auth के साथ जैसा आपकी जरूरत हो)
 router.post('/estimate', estimateFare);
 
-// Book ride (new route)
-router.post('/book', bookRide);
-
-// Backward compatibility (old app)
-router.post('/create', bookRide);
+// Book ride (सुरक्षित /book राउट - इसमें protect मिडलवेयर लगाना जरूरी है)
+router.post('/book', protect, bookRide);
 
 // Active ride
-router.get('/active', getActiveRide);
+router.get('/active', protect, getActiveRide);
 
 // Ride history
-router.get('/history/:userId', getRideHistory);
+router.get('/history/:userId', protect, getRideHistory);
 
-// Single ride
-router.get('/:id', getRideById);
+// Single ride details
+router.get('/:id', protect, getRideById);
 
 // Cancel ride
-router.put('/:id/cancel', cancelRide);
+router.put('/:id/cancel', protect, cancelRide);
 
 // Rate ride
-router.post('/:id/rate', rateRide);
+router.post('/:id/rate', protect, rateRide);
 
 module.exports = router;
