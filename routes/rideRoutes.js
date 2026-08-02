@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { protect } = require('../middleware/auth');
+const { protectCustomer } = require('../middleware/auth');
 
 const {
   estimateFare,
@@ -17,21 +17,21 @@ const {
 router.post('/estimate', estimateFare);
 
 // Book Ride
-router.post('/book', protect, bookRide);
+router.post('/book', protectCustomer, bookRide);
 
 // Active Ride
-router.get('/active', protect, getActiveRide);
+router.get('/active', protectCustomer, getActiveRide);
 
 // Ride History
-router.get('/history', protect, getRideHistory);
+router.get('/history', protectCustomer, getRideHistory);
 
 // Ride Details
-router.get('/:id', protect, getRideById);
+router.get('/:id', protectCustomer, getRideById);
 
 // Cancel Ride
-router.put('/:id/cancel', protect, cancelRide);
+router.put('/:id/cancel', protectCustomer, cancelRide);
 
 // Rate Ride
-router.post('/:id/rate', protect, rateRide);
+router.post('/:id/rate', protectCustomer, rateRide);
 
 module.exports = router;
