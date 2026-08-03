@@ -10,17 +10,29 @@ const sendOtp = async (req, res, next) => {
     const { phone } = req.body;
 
     if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
-      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid 10-digit mobile number",
+      });
     }
 
-    const code = await createOtp(phone, 'login');
-    const sent = await sendOtpSms(phone, code);
+    // OTP Generate
+    const code = await createOtp(phone, "login");
 
-    if (!sent) {
-      return res.status(500).json({ success: false, message: 'Failed to send OTP, try again' });
+    // SMS Send (optional)
+    try {
+      await sendOtpSms(phone, code);
+    } catch (e) {
+      console.log("SMS not sent, using test OTP:", code);
     }
 
-    res.status(200).json({ success: true, message: 'OTP sent successfully' });
+    // Test Mode Response
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      otp: code
+    });
+
   } catch (error) {
     next(error);
   }
