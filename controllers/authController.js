@@ -26,11 +26,9 @@ const sendOtp = async (req, res, next) => {
       console.log("SMS not sent, using test OTP:", code);
     }
 
-    // Test Mode Response
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      otp: code
     });
 
   } catch (error) {
