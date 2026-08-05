@@ -54,4 +54,19 @@ const setToggle = async (req, res, next) => {
   }
 };
 
-module.exports = { listToggles, createToggle, setToggle };
+// @desc    Delete a feature toggle
+// @route   DELETE /api/admin/toggles/:key
+// @access  Private (admin)
+const deleteToggle = async (req, res, next) => {
+  try {
+    const toggle = await FeatureToggle.findOneAndDelete({ key: req.params.key });
+    if (!toggle) {
+      return res.status(404).json({ success: false, message: 'Feature toggle not found' });
+    }
+    res.status(200).json({ success: true, message: 'Feature toggle deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { listToggles, createToggle, setToggle, deleteToggle };
