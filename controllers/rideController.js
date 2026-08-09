@@ -23,9 +23,9 @@ const estimateFare = async (req, res, next) => {
     );
 
     const vehicleTypes = ['bike', 'auto', 'car_mini', 'car_sedan'];
-    const estimates = vehicleTypes.map((vehicleType) => ({
-      vehicleType,
-      ...calculateRideFare({ vehicleType, distanceKm, durationMin }),
+    const estimates = await Promise.all(vehicleTypes.map(async (vehicleType) => {
+      const fare = await calculateRideFare({ vehicleType, distanceKm, durationMin });
+      return { vehicleType, ...fare };
     }));
 
     res.status(200).json({ success: true, distanceKm, durationMin, estimates });
@@ -66,7 +66,7 @@ const bookRide = async (req, res, next) => {
       drop.lng
     );
 
-    const fare = calculateRideFare({ vehicleType, distanceKm, durationMin });
+    const fare = await calculateRideFare({ vehicleType, distanceKm, durationMin });
     const startOtp = generateOtpCode().slice(0, 4);
 
     const ride = await Ride.create({
@@ -81,10 +81,50 @@ const bookRide = async (req, res, next) => {
       startOtp,
     });
 
-    // Notify all online drivers of matching vehicle type about the new request
+    // Find nearby online and available drivers of the requested vehicle type
+    const nearbyDrivers = await Driver.find({
+      isOnline: true,
+      isAvailable: true,
+      vehicleType: vehicleType,
+      currentLocation: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [pickup.lng, pickup.lat],
+          },
+          $maxDistance: 5000, // 5km radius
+        },
+      },
+    });
+
     const io = req.app.get('io');
-    if (io) {
-      io.emit('new_ride_request', { rideId: ride._id, vehicleType, pickup });
+    if (io && nearbyDrivers.length > 0) {
+      nearbyDrivers.forEach((driver) => {
+        io.to(`driver_${driver._id}`).emit('new_ride_request', {
+          rideId: ride._id,
+          vehicleType,
+          pickup
+        });
+      });
+
+      // Implement timeout/no-driver handling
+      setTimeout(async () => {
+        try {
+          const checkRide = await Ride.findById(ride._id);
+          if (checkRide && checkRide.status === 'requested') {
+            checkRide.status = 'cancelled';
+            checkRide.cancelReason = 'No drivers available';
+            await checkRide.save();
+
+            io.to(`ride_${ride._id}`).emit('ride_status_update', {
+              status: 'cancelled',
+              cancelReason: 'No drivers available'
+            });
+          }
+        } catch (err) {
+          console.error('Error handling ride timeout:', err);
+        }
+      }, 60000); // 60 seconds timeout
     }
 
     res.status(201).json({ success: true, message: 'Ride requested successfully', ride });
@@ -184,6 +224,14 @@ const cancelRide = async (req, res, next) => {
 
     if (ride.driver) {
       await Driver.findByIdAndUpdate(ride.driver, { isAvailable: true });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`ride_${ride._id}`).emit('ride_status_update', {
+        status: 'cancelled',
+        cancelledBy: 'customer'
+      });
     }
 
     res.status(200).json({ success: true, message: 'Ride cancelled', ride });

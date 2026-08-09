@@ -1,4 +1,6 @@
-// Ride fare configuration per vehicle type
+const VehicleType = require('../models/VehicleType');
+
+// Fallback Ride fare configuration per vehicle type (used for seeding and if DB fails)
 const RIDE_RATES = {
   bike: { baseFare: 20, perKm: 6, perMin: 1, minFare: 30 },
   auto: { baseFare: 30, perKm: 9, perMin: 1.5, minFare: 45 },
@@ -8,8 +10,27 @@ const RIDE_RATES = {
 
 const PLATFORM_FEE_PERCENT = 0.02; // 2%
 
-const calculateRideFare = ({ vehicleType, distanceKm, durationMin, surgeMultiplier = 1 }) => {
-  const rate = RIDE_RATES[vehicleType];
+const getVehicleRate = async (typeId) => {
+  try {
+    const vt = await VehicleType.findOne({ id: typeId, type: 'ride', isActive: true });
+    if (vt) {
+      return {
+        baseFare: vt.baseFare,
+        perKm: vt.perKm,
+        perMin: vt.perMin,
+        minFare: vt.minFare,
+      };
+    }
+  } catch (err) {
+    console.error('Error fetching vehicle type rate from DB', err);
+  }
+
+  // Fallback to static rates
+  return RIDE_RATES[typeId];
+};
+
+const calculateRideFare = async ({ vehicleType, distanceKm, durationMin, surgeMultiplier = 1 }) => {
+  const rate = await getVehicleRate(vehicleType);
   if (!rate) throw new Error('Invalid vehicle type');
 
   const baseFare = rate.baseFare;
