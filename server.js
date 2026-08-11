@@ -19,6 +19,10 @@ const driverParcelRoutes = require('./routes/driverParcelRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const placesRoutes = require('./routes/placesRoutes');
 const walletRoutes = require('./routes/walletRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const supportRoutes = require('./routes/supportRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -99,6 +103,10 @@ app.use('/api/driver/parcels', driverParcelRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/support', supportRoutes);
 
 
 // Root check

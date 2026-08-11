@@ -60,6 +60,10 @@ const rideSchema = new mongoose.Schema(
     startedAt: { type: Date },
     completedAt: { type: Date },
 
+    couponCode: { type: String, default: null },
+    discount: { type: Number, default: 0 },
+    finalAmount: { type: Number, default: null },
+
     customerRating: { type: Number, min: 1, max: 5 },
     customerReview: { type: String, default: '' },
     driverRating: { type: Number, min: 1, max: 5 },

@@ -46,6 +46,19 @@ const {
   broadcastNotification,
   getNotificationHistory,
 } = require('../controllers/adminNotificationController');
+const {
+  createCoupon,
+  listCoupons,
+  getCouponById,
+  updateCoupon,
+  deleteCoupon,
+} = require('../controllers/adminCouponController');
+const {
+  listAllTickets,
+  getAdminTicketById,
+  updateTicketStatus,
+  adminReplyToTicket,
+} = require('../controllers/adminSupportController');
 
 // Public Admin routes
 router.post('/auth/login', adminLogin);
@@ -117,6 +130,19 @@ router.delete('/toggles/:key', deleteToggle);
 // Settings (UPI / QR / Bank / Support)
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
+
+// Coupons Management
+router.post('/coupons', createCoupon);
+router.get('/coupons', listCoupons);
+router.get('/coupons/:id', getCouponById);
+router.put('/coupons/:id', updateCoupon);
+router.delete('/coupons/:id', deleteCoupon);
+
+// Support Tickets Management
+router.get('/support/tickets', listAllTickets);
+router.get('/support/tickets/:id', getAdminTicketById);
+router.put('/support/tickets/:id/status', updateTicketStatus);
+router.post('/support/tickets/:id/replies', adminReplyToTicket);
 
 // Notifications
 router.post('/notifications/broadcast', broadcastNotification);

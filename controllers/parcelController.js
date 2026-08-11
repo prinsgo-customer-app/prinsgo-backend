@@ -1,5 +1,6 @@
 const Parcel = require('../models/Parcel');
 const Driver = require('../models/Driver');
+const Coupon = require('../models/Coupon');
 const { calculateParcelCharge } = require('../utils/fareCalculator');
 const { getDistanceAndDuration } = require('../utils/mapsService');
 const { generateOtpCode } = require('../utils/otpService');
@@ -41,7 +42,7 @@ const estimateParcelCharge = async (req, res, next) => {
 // @access  Private (customer)
 const bookParcel = async (req, res, next) => {
   try {
-    const { pickup, drop, parcelType, weightCategory, paymentMethod } = req.body;
+    const { pickup, drop, parcelType, weightCategory, paymentMethod, couponCode } = req.body;
 
     if (!pickup?.address || !drop?.address) {
       return res.status(400).json({ success: false, message: 'Pickup and drop details are required' });
@@ -67,6 +68,70 @@ const bookParcel = async (req, res, next) => {
     );
 
     const charges = calculateParcelCharge({ weightCategory, distanceKm });
+
+    // Coupon Processing
+    let finalDiscount = 0;
+    let finalCode = null;
+    let finalAmt = charges.totalCharge;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim() });
+      if (!coupon) {
+        return res.status(400).json({ success: false, message: 'Invalid coupon code' });
+      }
+      if (!coupon.isActive) {
+        return res.status(400).json({ success: false, message: 'Coupon is inactive' });
+      }
+      if (new Date(coupon.expiryDate) <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Coupon has expired' });
+      }
+      if (coupon.eligibleService !== 'all' && coupon.eligibleService !== 'parcel') {
+        return res.status(400).json({ success: false, message: 'This coupon is not valid for parcel deliveries' });
+      }
+      if (charges.totalCharge < coupon.minOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum order amount of ₹${coupon.minOrderAmount} is required to apply this coupon`,
+        });
+      }
+      if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+        return res.status(400).json({ success: false, message: 'Coupon usage limit reached' });
+      }
+
+      const userRecord = coupon.userUsage?.find(
+        (u) => u.userId.toString() === req.user._id.toString()
+      );
+      if (userRecord && userRecord.usedCount >= coupon.userUsageLimit) {
+        return res.status(400).json({
+          success: false,
+          message: `You have reached your limit of ${coupon.userUsageLimit} uses for this coupon`,
+        });
+      }
+
+      // Calculate discount
+      if (coupon.discountType === 'percentage') {
+        finalDiscount = (charges.totalCharge * coupon.discountValue) / 100;
+        if (coupon.maxDiscountAmount > 0) {
+          finalDiscount = Math.min(finalDiscount, coupon.maxDiscountAmount);
+        }
+      } else if (coupon.discountType === 'fixed') {
+        finalDiscount = Math.min(charges.totalCharge, coupon.discountValue);
+      }
+
+      finalDiscount = Number(finalDiscount.toFixed(2));
+      finalAmt = Number((charges.totalCharge - finalDiscount).toFixed(2));
+      finalCode = coupon.code;
+
+      // Consume coupon
+      coupon.usedCount += 1;
+      if (userRecord) {
+        userRecord.usedCount += 1;
+      } else {
+        coupon.userUsage.push({ userId: req.user._id, usedCount: 1 });
+      }
+      await coupon.save();
+    }
+
     const receiverOtp = generateOtpCode().slice(0, 4);
 
     const parcel = await Parcel.create({
@@ -80,6 +145,9 @@ const bookParcel = async (req, res, next) => {
       charges,
       paymentMethod: paymentMethod || 'cash',
       receiverOtp,
+      couponCode: finalCode,
+      discount: finalDiscount,
+      finalAmount: finalAmt,
     });
 
     // Notify all online drivers about the new parcel request

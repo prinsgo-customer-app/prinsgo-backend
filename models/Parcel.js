@@ -67,6 +67,10 @@ const parcelSchema = new mongoose.Schema(
     requestedAt: { type: Date, default: Date.now },
     pickedUpAt: { type: Date },
     deliveredAt: { type: Date },
+
+    couponCode: { type: String, default: null },
+    discount: { type: Number, default: 0 },
+    finalAmount: { type: Number, default: null },
   },
   { timestamps: true }
 );
