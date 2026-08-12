@@ -1,13 +1,22 @@
 // utils/mapsService.js
 
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c;
+  return d;
+};
+
 const getApiKey = () => {
-  const apiKey = process.env.GOOGLE_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("GOOGLE_API_KEY is not configured");
-  }
-
-  return apiKey;
+  return process.env.GOOGLE_API_KEY || process.env.GOOGLE_MAPS_API_KEY || null;
 };
 
 // ===============================
@@ -21,35 +30,52 @@ const getDistanceAndDuration = async (
 ) => {
   const apiKey = getApiKey();
 
-  const url =
-    `https://maps.googleapis.com/maps/api/distancematrix/json` +
-    `?origins=${originLat},${originLng}` +
-    `&destinations=${destLat},${destLng}` +
-    `&key=${apiKey}`;
-
-  const response = await fetch(url);
-  const data = await response.json();
-
-  console.log("Distance Matrix Response:", data);
-
-  if (data.status !== "OK") {
-    throw new Error(
-      `Google Distance Matrix Error: ${data.status} - ${
-        data.error_message || "Unknown Error"
-      }`
-    );
+  // Haversine fallback if API key is not configured
+  if (!apiKey) {
+    console.warn("GOOGLE_API_KEY not configured, using haversine fallback.");
+    const dist = calculateHaversineDistance(originLat, originLng, destLat, destLng);
+    const distanceKm = dist > 0 ? Number(dist.toFixed(1)) : 1.5;
+    const durationMin = Math.max(1, Math.round(distanceKm * 2.5 + 3));
+    return { distanceKm, durationMin };
   }
 
-  const element = data.rows[0].elements[0];
+  try {
+    const url =
+      `https://maps.googleapis.com/maps/api/distancematrix/json` +
+      `?origins=${originLat},${originLng}` +
+      `&destinations=${destLat},${destLng}` +
+      `&key=${apiKey}`;
 
-  if (element.status !== "OK") {
-    throw new Error(element.status);
+    const response = await fetch(url);
+    const data = await response.json();
+
+    console.log("Distance Matrix Response:", data);
+
+    if (data.status !== "OK") {
+      throw new Error(
+        `Google Distance Matrix Error: ${data.status} - ${
+          data.error_message || "Unknown Error"
+        }`
+      );
+    }
+
+    const element = data.rows[0].elements[0];
+
+    if (element.status !== "OK") {
+      throw new Error(element.status);
+    }
+
+    return {
+      distanceKm: +(element.distance.value / 1000).toFixed(1),
+      durationMin: Math.round(element.duration.value / 60),
+    };
+  } catch (error) {
+    console.warn("Google Distance Matrix API call failed, using haversine fallback:", error.message);
+    const dist = calculateHaversineDistance(originLat, originLng, destLat, destLng);
+    const distanceKm = dist > 0 ? Number(dist.toFixed(1)) : 1.5;
+    const durationMin = Math.max(1, Math.round(distanceKm * 2.5 + 3));
+    return { distanceKm, durationMin };
   }
-
-  return {
-    distanceKm: +(element.distance.value / 1000).toFixed(1),
-    durationMin: Math.round(element.duration.value / 60),
-  };
 };
 
 // ===============================

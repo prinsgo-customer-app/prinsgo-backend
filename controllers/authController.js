@@ -140,6 +140,18 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+// @desc    Get all saved addresses
+// @route   GET /api/auth/addresses
+// @access  Private (customer)
+const getAddresses = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('savedAddresses');
+    res.status(200).json({ success: true, savedAddresses: user.savedAddresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Add a saved address (home/work/other)
 // @route   POST /api/auth/address
 // @access  Private (customer)
@@ -151,11 +163,78 @@ const addAddress = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Address, lat, and lng are required' });
     }
 
+    // Coordinates validation
+    if (typeof lat !== 'number' || typeof lng !== 'number' || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ success: false, message: 'Invalid coordinate range for lat (-90 to 90) or lng (-180 to 180)' });
+    }
+
+    // Label validation
+    const validLabels = ['home', 'work', 'other'];
+    const cleanLabel = label ? label.toLowerCase().trim() : 'other';
+    if (!validLabels.includes(cleanLabel)) {
+      return res.status(400).json({ success: false, message: 'Label must be home, work, or other' });
+    }
+
+    if (address.trim().length < 3 || address.trim().length > 500) {
+      return res.status(400).json({ success: false, message: 'Address length must be between 3 and 500 characters' });
+    }
+
     const user = await User.findById(req.user._id);
-    user.savedAddresses.push({ label: label || 'other', address, lat, lng });
+    user.savedAddresses.push({ label: cleanLabel, address: address.trim(), lat, lng });
     await user.save();
 
     res.status(201).json({ success: true, message: 'Address added', savedAddresses: user.savedAddresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update a saved address
+// @route   PUT /api/auth/address/:addressId
+// @access  Private (customer)
+const updateAddress = async (req, res, next) => {
+  try {
+    const { label, address, lat, lng } = req.body;
+    const { addressId } = req.params;
+
+    if (!address || lat === undefined || lng === undefined) {
+      return res.status(400).json({ success: false, message: 'Address, lat, and lng are required' });
+    }
+
+    // Coordinates validation
+    if (typeof lat !== 'number' || typeof lng !== 'number' || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ success: false, message: 'Invalid coordinate range for lat (-90 to 90) or lng (-180 to 180)' });
+    }
+
+    // Label validation
+    const validLabels = ['home', 'work', 'other'];
+    const cleanLabel = label ? label.toLowerCase().trim() : 'other';
+    if (!validLabels.includes(cleanLabel)) {
+      return res.status(400).json({ success: false, message: 'Label must be home, work, or other' });
+    }
+
+    if (address.trim().length < 3 || address.trim().length > 500) {
+      return res.status(400).json({ success: false, message: 'Address length must be between 3 and 500 characters' });
+    }
+
+    const user = await User.findById(req.user._id);
+    const index = user.savedAddresses.findIndex((a) => a._id.toString() === addressId);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Saved address not found' });
+    }
+
+    user.savedAddresses[index] = {
+      _id: addressId,
+      label: cleanLabel,
+      address: address.trim(),
+      lat,
+      lng,
+    };
+
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Address updated successfully', savedAddresses: user.savedAddresses });
   } catch (error) {
     next(error);
   }
@@ -167,9 +246,15 @@ const addAddress = async (req, res, next) => {
 const deleteAddress = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
+    const initialLength = user.savedAddresses.length;
     user.savedAddresses = user.savedAddresses.filter(
       (a) => a._id.toString() !== req.params.addressId
     );
+
+    if (user.savedAddresses.length === initialLength) {
+      return res.status(404).json({ success: false, message: 'Saved address not found' });
+    }
+
     await user.save();
 
     res.status(200).json({ success: true, message: 'Address removed', savedAddresses: user.savedAddresses });
@@ -183,6 +268,8 @@ module.exports = {
   verifyOtpAndLogin,
   getMe,
   updateProfile,
+  getAddresses,
   addAddress,
+  updateAddress,
   deleteAddress,
 };
