@@ -23,6 +23,7 @@ const couponRoutes = require('./routes/couponRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const publicRoutes = require('./routes/publicRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -107,6 +108,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api', publicRoutes);
 
 
 // Root check

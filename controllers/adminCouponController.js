@@ -19,7 +19,7 @@ const createCoupon = async (req, res, next) => {
       eligibleService,
     } = req.body;
 
-    if (!code || !discountValue || !expiryDate) {
+    if (!code || discountValue === undefined || !expiryDate) {
       return res.status(400).json({
         success: false,
         message: 'code, discountValue, and expiryDate are required',
@@ -31,7 +31,7 @@ const createCoupon = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Coupon code already exists' });
     }
 
-    const coupon = await Coupon.create({
+    const created = await Coupon.create({
       code: code.toUpperCase().trim(),
       description,
       discountType,
@@ -45,7 +45,9 @@ const createCoupon = async (req, res, next) => {
       eligibleService,
     });
 
-    res.status(201).json({ success: true, message: 'Coupon created successfully', coupon });
+    const coupon = await Coupon.findById(created._id).lean();
+
+    res.status(201).json({ success: true, message: 'Coupon created successfully', coupon: coupon || created });
   } catch (error) {
     next(error);
   }
@@ -62,7 +64,8 @@ const listCoupons = async (req, res, next) => {
     const coupons = await Coupon.find()
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     const total = await Coupon.countDocuments();
 
@@ -83,7 +86,7 @@ const listCoupons = async (req, res, next) => {
 // @access  Private (admin)
 const getCouponById = async (req, res, next) => {
   try {
-    const coupon = await Coupon.findById(req.params.id);
+    const coupon = await Coupon.findById(req.params.id).lean();
     if (!coupon) {
       return res.status(404).json({ success: false, message: 'Coupon not found' });
     }
@@ -115,7 +118,9 @@ const updateCoupon = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Coupon not found' });
     }
 
-    res.status(200).json({ success: true, message: 'Coupon updated successfully', coupon });
+    const persisted = await Coupon.findById(coupon._id).lean();
+
+    res.status(200).json({ success: true, message: 'Coupon updated successfully', coupon: persisted || coupon });
   } catch (error) {
     next(error);
   }

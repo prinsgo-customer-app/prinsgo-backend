@@ -5,7 +5,7 @@ const Banner = require('../models/Banner');
 // @access  Private (admin)
 const listBanners = async (req, res, next) => {
   try {
-    const banners = await Banner.find().sort({ order: 1, createdAt: -1 });
+    const banners = await Banner.find().sort({ order: 1, createdAt: -1 }).lean();
     res.status(200).json({ success: true, banners });
   } catch (error) {
     next(error);
@@ -17,13 +17,22 @@ const listBanners = async (req, res, next) => {
 // @access  Private (admin)
 const createBanner = async (req, res, next) => {
   try {
-    const { title, imageUrl, linkType, linkValue, order } = req.body;
+    const { title, imageUrl, linkType, linkValue, order, isActive } = req.body;
     if (!title || !imageUrl) {
       return res.status(400).json({ success: false, message: 'title and imageUrl are required' });
     }
 
-    const banner = await Banner.create({ title, imageUrl, linkType, linkValue, order });
-    res.status(201).json({ success: true, message: 'Banner created', banner });
+    const created = await Banner.create({
+      title,
+      imageUrl,
+      linkType: linkType || 'none',
+      linkValue: linkValue || '',
+      order: order !== undefined ? order : 0,
+      isActive: isActive !== undefined ? isActive : true,
+    });
+
+    const banner = await Banner.findById(created._id).lean();
+    res.status(201).json({ success: true, message: 'Banner created', banner: banner || created });
   } catch (error) {
     next(error);
   }
@@ -38,10 +47,14 @@ const updateBanner = async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+
     if (!banner) {
       return res.status(404).json({ success: false, message: 'Banner not found' });
     }
-    res.status(200).json({ success: true, message: 'Banner updated', banner });
+
+    const persistedBanner = await Banner.findById(banner._id).lean();
+
+    res.status(200).json({ success: true, message: 'Banner updated', banner: persistedBanner || banner });
   } catch (error) {
     next(error);
   }

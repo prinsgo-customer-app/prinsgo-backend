@@ -87,7 +87,93 @@ async function runTests() {
     console.log('✅ Admin profile verified successfully via JWT.');
 
     // ==========================================
-    // Test 3: Customer CRUD
+    // Test 3: Settings & CMS Persistence Verification
+    // ==========================================
+    console.log('Testing Settings & CMS Persistence operations...');
+
+    const testCmsPayload = {
+      terms: 'TEST TERMS PERSIST 123',
+      privacy: 'TEST PRIVACY PERSIST 456',
+      about: 'TEST ABOUT PERSIST 789',
+      faq: 'TEST FAQ PERSIST 321',
+      faqs: [{ question: 'TEST FAQ PERSIST 321', answer: 'FAQ Answer 123' }],
+      cmsPages: [{ slug: 'about', title: 'About Us', content: 'TEST ABOUT PERSIST 789' }],
+      customerTerms: 'TEST TERMS PERSIST 123',
+      driverTerms: 'TEST DRIVER TERMS PERSIST 123',
+      supportPhone: '+1-800-555-0199',
+      supportEmail: 'support@prinsgo.com',
+    };
+
+    // 1. Save settings via PUT
+    const putSettingsRes = await fetch(`${BASE_URL}/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(testCmsPayload),
+    });
+    const putSettingsData = await putSettingsRes.json();
+    if (
+      !putSettingsRes.ok ||
+      !putSettingsData.success ||
+      putSettingsData.settings.terms !== 'TEST TERMS PERSIST 123' ||
+      putSettingsData.settings.privacy !== 'TEST PRIVACY PERSIST 456' ||
+      putSettingsData.settings.about !== 'TEST ABOUT PERSIST 789' ||
+      putSettingsData.settings.faq !== 'TEST FAQ PERSIST 321'
+    ) {
+      throw new Error('PUT /api/admin/settings failed: ' + JSON.stringify(putSettingsData));
+    }
+    console.log('✅ PUT /api/admin/settings response verified.');
+
+    // 2. Direct MongoDB document verification
+    const dbSettings = await AdminSettings.getSingleton();
+    if (
+      dbSettings.terms !== 'TEST TERMS PERSIST 123' ||
+      dbSettings.privacy !== 'TEST PRIVACY PERSIST 456' ||
+      dbSettings.about !== 'TEST ABOUT PERSIST 789' ||
+      dbSettings.faq !== 'TEST FAQ PERSIST 321'
+    ) {
+      throw new Error('MongoDB document persistence check failed: ' + JSON.stringify(dbSettings));
+    }
+    console.log('✅ Direct MongoDB document persistence verified.');
+
+    // 3. GET /api/admin/settings API verification
+    const getSettingsRes = await fetch(`${BASE_URL}/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const getSettingsData = await getSettingsRes.json();
+    if (
+      !getSettingsRes.ok ||
+      !getSettingsData.success ||
+      getSettingsData.settings.terms !== 'TEST TERMS PERSIST 123' ||
+      getSettingsData.settings.privacy !== 'TEST PRIVACY PERSIST 456' ||
+      getSettingsData.settings.about !== 'TEST ABOUT PERSIST 789' ||
+      getSettingsData.settings.faq !== 'TEST FAQ PERSIST 321'
+    ) {
+      throw new Error('GET /api/admin/settings check failed: ' + JSON.stringify(getSettingsData));
+    }
+    console.log('✅ GET /api/admin/settings response verified.');
+
+    // 4. Admin UI reload re-verification (simulated second fetch)
+    const reloadRes = await fetch(`${BASE_URL}/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const reloadData = await reloadRes.json();
+    if (
+      !reloadRes.ok ||
+      !reloadData.success ||
+      reloadData.settings.terms !== 'TEST TERMS PERSIST 123' ||
+      reloadData.settings.privacy !== 'TEST PRIVACY PERSIST 456' ||
+      reloadData.settings.about !== 'TEST ABOUT PERSIST 789' ||
+      reloadData.settings.faq !== 'TEST FAQ PERSIST 321'
+    ) {
+      throw new Error('Admin reload GET verification failed: ' + JSON.stringify(reloadData));
+    }
+    console.log('✅ Admin reload GET verification passed.');
+
+    // ==========================================
+    // Test 4: Customer CRUD
     // ==========================================
     console.log('Testing Customer CRUD operations...');
 
@@ -137,7 +223,7 @@ async function runTests() {
     console.log('✅ Update Customer passed.');
 
     // ==========================================
-    // Test 4: Driver CRUD
+    // Test 5: Driver CRUD
     // ==========================================
     console.log('Testing Driver CRUD operations...');
 
@@ -173,7 +259,7 @@ async function runTests() {
     console.log('✅ List/Search Drivers passed.');
 
     // ==========================================
-    // Test 5: Ride CRUD
+    // Test 6: Ride CRUD
     // ==========================================
     console.log('Testing Ride CRUD operations...');
 
