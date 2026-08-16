@@ -5,7 +5,7 @@ const FeatureToggle = require('../models/FeatureToggle');
 // @access  Private (admin)
 const listToggles = async (req, res, next) => {
   try {
-    const toggles = await FeatureToggle.find().sort({ key: 1 });
+    const toggles = await FeatureToggle.find().sort({ key: 1 }).lean();
     res.status(200).json({ success: true, toggles });
   } catch (error) {
     next(error);
@@ -22,33 +22,51 @@ const createToggle = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'key and label are required' });
     }
 
-    const toggle = await FeatureToggle.create({ key, label, description, isEnabled });
-    res.status(201).json({ success: true, message: 'Feature toggle created', toggle });
+    const existing = await FeatureToggle.findOne({ key });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Feature toggle with this key already exists' });
+    }
+
+    const created = await FeatureToggle.create({ key, label, description, isEnabled });
+    const toggle = await FeatureToggle.findById(created._id).lean();
+
+    res.status(201).json({ success: true, message: 'Feature toggle created', toggle: toggle || created });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Flip a feature toggle on/off
+// @desc    Flip a feature toggle on/off or update description/label
 // @route   PUT /api/admin/toggles/:key
 // @access  Private (admin)
 const setToggle = async (req, res, next) => {
   try {
-    const { isEnabled } = req.body;
-    if (typeof isEnabled !== 'boolean') {
-      return res.status(400).json({ success: false, message: 'isEnabled must be true or false' });
+    const updateFields = {};
+    if (req.body.isEnabled !== undefined) updateFields.isEnabled = Boolean(req.body.isEnabled);
+    if (req.body.label !== undefined) updateFields.label = req.body.label;
+    if (req.body.description !== undefined) updateFields.description = req.body.description;
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid update fields provided' });
     }
 
     const toggle = await FeatureToggle.findOneAndUpdate(
       { key: req.params.key },
-      { isEnabled },
-      { new: true }
+      { $set: updateFields },
+      { new: true, runValidators: true }
     );
+
     if (!toggle) {
       return res.status(404).json({ success: false, message: 'Feature toggle not found' });
     }
 
-    res.status(200).json({ success: true, message: `${toggle.label} is now ${isEnabled ? 'enabled' : 'disabled'}`, toggle });
+    const persisted = await FeatureToggle.findById(toggle._id).lean();
+
+    res.status(200).json({
+      success: true,
+      message: `${persisted ? persisted.label : toggle.label} is now ${(persisted ? persisted.isEnabled : toggle.isEnabled) ? 'enabled' : 'disabled'}`,
+      toggle: persisted || toggle,
+    });
   } catch (error) {
     next(error);
   }
