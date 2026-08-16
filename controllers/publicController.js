@@ -26,13 +26,25 @@ const getPublicToggles = async (req, res, next) => {
   }
 };
 
-// @desc    Get platform settings and CMS content for customer and driver apps
+// @desc    Get platform settings and CMS content for customer and driver apps (Sanitized Public DTO)
 // @route   GET /api/settings, GET /api/config/settings, GET /api/cms
 // @access  Public
 const getPublicSettings = async (req, res, next) => {
   try {
-    const settings = await AdminSettings.getSingleton();
-    res.status(200).json({ success: true, settings });
+    const settingsDoc = await AdminSettings.getSingleton();
+    const settingsObj = settingsDoc.toObject ? settingsDoc.toObject() : settingsDoc;
+
+    // Security DTO: Strip out sensitive bank details and internal administrative fields
+    const {
+      bankAccountName,
+      bankAccountNumber,
+      bankIfsc,
+      bankName,
+      __v,
+      ...safePublicSettings
+    } = settingsObj;
+
+    res.status(200).json({ success: true, settings: safePublicSettings });
   } catch (error) {
     next(error);
   }
