@@ -29,6 +29,9 @@ const adminSettingsSchema = new mongoose.Schema(
     driverTerms: { type: String, default: '' },
     driverPrivacy: { type: String, default: '' },
     driverAbout: { type: String, default: '' },
+
+    // Explore Cities CMS (tourist destinations shown in Customer App)
+    explore_cities_list: { type: mongoose.Schema.Types.Mixed, default: [] },
   },
   { timestamps: true }
 );
