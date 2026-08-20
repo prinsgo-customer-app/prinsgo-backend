@@ -40,6 +40,7 @@ const updateSettings = async (req, res, next) => {
       'driverTerms',
       'driverPrivacy',
       'driverAbout',
+      'explore_cities_list',
     ];
 
     const updateData = {};
