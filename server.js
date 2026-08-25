@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -90,6 +91,14 @@ app.get('/api', (req, res) => {
   });
 });
 
+// ✅ HEALTH CHECK (Lightweight, external monitor)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'prinsgo-backend',
+  });
+});
+
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -150,5 +159,38 @@ app.use(errorHandler);
 // Server start
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`PrinsGo backend running on port ${PORT}`);
+  console.log(`PrinsGo Backend is ready\nHealth URL: /api/health`);
+});
+
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 120000;
+
+// Graceful shutdown
+const shutdown = () => {
+  console.log('Shutting down gracefully...');
+  server.close(async () => {
+    console.log('HTTP server closed');
+    try {
+      await mongoose.connection.close(false);
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err);
+      process.exit(1);
+    }
+  });
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// Handle unhandled rejections and exceptions
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
 });
