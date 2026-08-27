@@ -102,6 +102,7 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/rides', rideRoutes);
 app.use('/api/parcels', parcelRoutes);
 
