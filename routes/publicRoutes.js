@@ -9,6 +9,7 @@ const {
 
 // Public Banners
 router.get('/banners', getPublicBanners);
+router.get('/v1/home/banners', getPublicBanners);
 
 // Public Feature Toggles
 router.get('/toggles', getPublicToggles);
