@@ -4,6 +4,7 @@ const {
   getPublicBanners,
   getPublicToggles,
   getPublicSettings,
+  getAppConfig,
 } = require('../controllers/publicController');
 
 // Public Banners
@@ -15,6 +16,7 @@ router.get('/toggles', getPublicToggles);
 // Public Settings & CMS Content
 router.get('/settings', getPublicSettings);
 router.get('/config/settings', getPublicSettings);
+router.get('/v1/config', getAppConfig);
 router.get('/cms', getPublicSettings);
 
 module.exports = router;

@@ -55,3 +55,28 @@ module.exports = {
   getPublicToggles,
   getPublicSettings,
 };
+
+const getAppConfig = async (req, res, next) => {
+  try {
+    const settingsDoc = await AdminSettings.getSingleton();
+    const settingsObj = settingsDoc.toObject ? settingsDoc.toObject() : settingsDoc;
+
+    const {
+      bankAccountName,
+      bankAccountNumber,
+      bankIfsc,
+      bankName,
+      __v,
+      ...safeConfig
+    } = settingsObj;
+
+    res.status(200).json({
+      success: true,
+      data: safeConfig,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.getAppConfig = getAppConfig;
