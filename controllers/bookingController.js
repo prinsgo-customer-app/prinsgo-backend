@@ -1,7 +1,8 @@
 const Ride = require('../models/Ride');
 const Parcel = require('../models/Parcel');
+const WorkerBooking = require('../models/WorkerBooking');
 
-// @desc    Get unified bookings (rides + parcels) for a customer with status filters and pagination
+// @desc    Get unified bookings (rides + parcels + workers) for a customer with status filters and pagination
 // @route   GET /api/bookings
 // @access  Private (customer)
 const getMyBookings = async (req, res, next) => {
@@ -13,30 +14,39 @@ const getMyBookings = async (req, res, next) => {
     // Status map logic
     // Rides ongoing: requested, accepted, driver_arrived, started
     // Parcels ongoing: requested, accepted, picked_up, in_transit
+    // Workers ongoing: pending, accepted, on_the_way, arrived, in_progress
     let rideStatusQuery = {};
     let parcelStatusQuery = {};
+    let workerStatusQuery = {};
 
     if (statusFilter === 'ongoing') {
       rideStatusQuery.status = { $in: ['requested', 'accepted', 'driver_arrived', 'started'] };
       parcelStatusQuery.status = { $in: ['requested', 'accepted', 'picked_up', 'in_transit'] };
+      workerStatusQuery.status = { $in: ['pending', 'accepted', 'on_the_way', 'arrived', 'in_progress'] };
     } else if (statusFilter === 'completed') {
       rideStatusQuery.status = 'completed';
       parcelStatusQuery.status = 'delivered';
+      workerStatusQuery.status = 'completed';
     } else if (statusFilter === 'cancelled') {
       rideStatusQuery.status = 'cancelled';
       parcelStatusQuery.status = 'cancelled';
+      workerStatusQuery.status = { $in: ['cancelled', 'rejected'] };
     }
 
     const customerId = req.user._id;
 
-    // Fetch rides and parcels
+    // Fetch rides, parcels and worker bookings
     const rides = await Ride.find({ customer: customerId, ...rideStatusQuery })
       .populate('driver', 'name phone vehicleNumber vehicleType rating');
 
     const parcels = await Parcel.find({ customer: customerId, ...parcelStatusQuery })
       .populate('driver', 'name phone vehicleNumber vehicleType rating');
 
-    // Unify both arrays
+    const workerBookings = await WorkerBooking.find({ customer: customerId, ...workerStatusQuery })
+      .populate('worker', 'name phone profileImage rating')
+      .populate('category', 'name icon');
+
+    // Unify all arrays
     const unifiedBookings = [];
 
     rides.forEach((ride) => {
@@ -90,6 +100,34 @@ const getMyBookings = async (req, res, next) => {
           weightCategory: parcel.weightCategory,
           distanceKm: parcel.distanceKm,
           durationMin: parcel.durationMin,
+        },
+      });
+    });
+
+    workerBookings.forEach((booking) => {
+      let mappedStatus = 'ongoing';
+      if (booking.status === 'completed') mappedStatus = 'completed';
+      if (booking.status === 'cancelled' || booking.status === 'rejected') mappedStatus = 'cancelled';
+
+      unifiedBookings.push({
+        id: booking._id,
+        bookingType: 'worker',
+        pickup: booking.location,
+        drop: booking.location,
+        status: mappedStatus,
+        subStatus: booking.status,
+        amount: booking.finalAmount !== null ? booking.finalAmount : booking.pricing?.totalAmount,
+        originalFare: booking.pricing?.totalAmount,
+        discount: booking.discount || 0,
+        paymentMethod: booking.paymentMethod,
+        paymentStatus: booking.paymentStatus,
+        createdAt: booking.createdAt,
+        worker: booking.worker,
+        details: {
+          categoryName: booking.category?.name,
+          date: booking.date,
+          time: booking.time,
+          taskDescription: booking.taskDescription,
         },
       });
     });

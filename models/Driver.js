@@ -13,12 +13,23 @@ const driverSchema = new mongoose.Schema(
     isPhoneVerified: { type: Boolean, default: false },
     profileImage: { type: String, default: '' },
 
+    isWorker: { type: Boolean, default: false },
+    workerServiceCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'WorkerCategory' }],
+    experience: { type: Number, default: 0 },
+    about: { type: String, default: '' },
+    basePrice: { type: Number, default: 0 },
+
     vehicleType: {
       type: String,
-      enum: ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van'],
+      enum: ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van', 'none', 'worker'],
       required: true,
     },
-    vehicleNumber: { type: String, required: true, uppercase: true, trim: true },
+    vehicleNumber: {
+      type: String,
+      required: function() { return !this.isWorker && this.vehicleType !== 'none' && this.vehicleType !== 'worker'; },
+      uppercase: true,
+      trim: true
+    },
 
     documents: {
       license: { type: String, default: '' },
@@ -43,6 +54,7 @@ const driverSchema = new mongoose.Schema(
     rating: { type: Number, default: 5.0 },
     totalRides: { type: Number, default: 0 },
     totalParcels: { type: Number, default: 0 },
+    totalWorkerJobs: { type: Number, default: 0 },
 
     walletBalance: { type: Number, default: 0 },
     earningsToday: { type: Number, default: 0 },

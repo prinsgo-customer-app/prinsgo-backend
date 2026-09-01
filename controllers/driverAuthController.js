@@ -2,7 +2,7 @@ const Driver = require('../models/Driver');
 const generateToken = require('../utils/generateToken');
 const { createOtp, checkOtp, consumeOtp, sendOtpSms } = require('../utils/otpService');
 
-const VALID_VEHICLES = ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van'];
+const VALID_VEHICLES = ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van', 'none', 'worker'];
 
 // @desc    Send OTP to driver's phone
 // @route   POST /api/driver/auth/send-otp
@@ -46,10 +46,11 @@ const verifyOtpAndLogin = async (req, res, next) => {
     let isNewDriver = false;
 
     if (!driver) {
-      if (!name || !vehicleType || !vehicleNumber) {
+      const isWorker = vehicleType === 'worker' || vehicleType === 'none';
+      if (!name || !vehicleType || (!isWorker && !vehicleNumber)) {
         return res.status(400).json({
           success: false,
-          message: 'Name, vehicle type, and vehicle number are required for registration',
+          message: 'Name, vehicle type, and vehicle number are required for registration (vehicle number optional for workers)',
           isNewDriver: true,
         });
       }
@@ -62,7 +63,8 @@ const verifyOtpAndLogin = async (req, res, next) => {
         phone,
         name,
         vehicleType,
-        vehicleNumber,
+        vehicleNumber: vehicleNumber || '',
+        isWorker: isWorker,
         isPhoneVerified: true,
       });
       isNewDriver = true;
