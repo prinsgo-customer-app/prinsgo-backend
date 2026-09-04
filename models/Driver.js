@@ -19,6 +19,13 @@ const driverSchema = new mongoose.Schema(
     about: { type: String, default: '' },
     basePrice: { type: Number, default: 0 },
 
+    packages: [{
+      name: { type: String, trim: true },
+      price: { type: Number, default: 0 },
+      description: { type: String, trim: true }
+    }],
+    gallery: [{ type: String }],
+
     vehicleType: {
       type: String,
       enum: ['bike', 'auto', 'car_mini', 'car_sedan', 'parcel_van', 'none', 'worker'],
