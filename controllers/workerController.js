@@ -20,7 +20,8 @@ const getCategories = async (req, res, next) => {
 // @access  Public (Customer)
 const getWorkers = async (req, res, next) => {
   try {
-    const { category, search, lat, lng, radius } = req.query;
+    const { categoryId, category, search, lat, lng, radius } = req.query;
+    const catId = categoryId || category;
 
     let query = {
       isWorker: true,
@@ -30,8 +31,8 @@ const getWorkers = async (req, res, next) => {
       isOnline: true,
     };
 
-    if (category) {
-      query.workerServiceCategories = category;
+    if (catId) {
+      query.workerServiceCategories = catId;
     }
 
     if (search) {
@@ -55,7 +56,7 @@ const getWorkers = async (req, res, next) => {
     }
 
     const workers = await Driver.find(query)
-      .select('name profileImage rating experience about basePrice workerServiceCategories totalWorkerJobs currentLocation')
+      .select('name profileImage rating experience about basePrice workerServiceCategories totalWorkerJobs currentLocation packages gallery')
       .populate('workerServiceCategories', 'name slug icon')
       .lean();
 
