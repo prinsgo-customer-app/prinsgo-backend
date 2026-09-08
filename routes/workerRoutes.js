@@ -7,6 +7,7 @@ const {
   getWorkers,
   getWorkerById,
   createWorkerBooking,
+  getWorkerBookingById,
   reviewWorkerBooking,
 } = require('../controllers/workerController');
 
@@ -20,6 +21,7 @@ router.get('/:id', getWorkerById);
 
 router.use(protectCustomer);
 router.post('/bookings', createWorkerBooking);
+router.get('/bookings/:id', getWorkerBookingById);
 router.put('/bookings/:id/review', reviewWorkerBooking);
 
 module.exports = router;
