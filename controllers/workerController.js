@@ -170,6 +170,31 @@ const createWorkerBooking = async (req, res, next) => {
   }
 };
 
+// @desc    Get worker booking by ID
+// @route   GET /api/workers/bookings/:id
+// @access  Private (Customer)
+const getWorkerBookingById = async (req, res, next) => {
+  try {
+    const booking = await WorkerBooking.findById(req.params.id)
+      .populate('worker', 'name profileImage phone rating workerServiceCategories')
+      .populate('customer', 'name phone profileImage')
+      .populate('category', 'name slug icon')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.customer._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this booking' });
+    }
+
+    res.status(200).json({ success: true, booking });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Review a completed worker booking
 // @route   PUT /api/workers/bookings/:id/review
 // @access  Private (Customer)
@@ -229,5 +254,6 @@ module.exports = {
   getWorkers,
   getWorkerById,
   createWorkerBooking,
+  getWorkerBookingById,
   reviewWorkerBooking,
 };
