@@ -119,21 +119,33 @@ const createWorkerBooking = async (req, res, next) => {
 
     // Check for double booking - consider any booking on the same date within 2 hours of this time as an overlap
     // For a robust system we'd use duration, but for now we'll match exact date and check hour overlap roughly.
-    const bookingDate = new Date(date);
-    const startOfDay = new Date(bookingDate.setHours(0,0,0,0));
-    const endOfDay = new Date(bookingDate.setHours(23,59,59,999));
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0,0,0,0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23,59,59,999);
 
-    // We'll just fetch active bookings on the same day and do a simple string comparison on time
-    // Assuming format is HH:MM. For production we should parse the times.
+    // We'll fetch active bookings on the same day and parse times properly, accounting for AM/PM
     const activeDayBookings = await WorkerBooking.find({
       worker: workerId,
       date: { $gte: startOfDay, $lte: endOfDay },
       status: { $in: ['pending', 'accepted', 'on_the_way', 'arrived', 'in_progress'] }
     });
 
-    const requestedHour = parseInt(time.split(':')[0], 10);
+    const parseHour = (timeStr) => {
+        if (!timeStr) return 0;
+        const isPM = /PM/i.test(timeStr);
+        const isAM = /AM/i.test(timeStr);
+        const cleanTime = timeStr.replace(/[^0-9:]/g, '');
+        let hour = parseInt(cleanTime.split(':')[0], 10);
+        if (isNaN(hour)) return 0;
+        if (isPM && hour < 12) hour += 12;
+        if (isAM && hour === 12) hour = 0;
+        return hour;
+    };
+
+    const requestedHour = parseHour(time);
     const hasOverlap = activeDayBookings.some(b => {
-        const bookedHour = parseInt(b.time.split(':')[0], 10);
+        const bookedHour = parseHour(b.time);
         return Math.abs(requestedHour - bookedHour) < 2; // block +/- 1 hour
     });
 
@@ -165,6 +177,31 @@ const createWorkerBooking = async (req, res, next) => {
     });
 
     res.status(201).json({ success: true, message: 'Worker booking created', booking });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get worker booking by ID
+// @route   GET /api/workers/bookings/:id
+// @access  Private (Customer)
+const getWorkerBookingById = async (req, res, next) => {
+  try {
+    const booking = await WorkerBooking.findById(req.params.id)
+      .populate('worker', 'name profileImage phone rating workerServiceCategories')
+      .populate('customer', 'name phone profileImage')
+      .populate('category', 'name slug icon')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.customer._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this booking' });
+    }
+
+    res.status(200).json({ success: true, booking });
   } catch (error) {
     next(error);
   }
@@ -229,5 +266,6 @@ module.exports = {
   getWorkers,
   getWorkerById,
   createWorkerBooking,
+  getWorkerBookingById,
   reviewWorkerBooking,
 };
