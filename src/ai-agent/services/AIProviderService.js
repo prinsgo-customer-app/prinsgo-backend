@@ -24,10 +24,11 @@ class AIProviderService {
       } else if (provider.providerType === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
         status = 'CONNECTED';
         isConnected = true;
-      } else if (provider.providerType === 'hermes' && process.env.HERMES_API_KEY && process.env.HERMES_BASE_URL) {
-        // Here we'd ideally make a real ping to HERMES_BASE_URL
-        status = 'CONNECTED';
-        isConnected = true;
+      } else if (provider.providerType === 'hermes') {
+        const HermesService = require('./HermesService');
+        // Let HermesService perform the real HTTP ping check to strictly enforce honesty
+        status = await HermesService.getStatus(provider.workspaceId);
+        isConnected = status === 'CONNECTED';
       } else if (provider.providerType === 'custom') {
          status = 'CONNECTED';
          isConnected = true;

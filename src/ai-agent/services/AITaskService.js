@@ -68,8 +68,13 @@ class AITaskService {
           status: 'INFO'
       });
 
-      // Delegation to execution engine would happen here
-      // E.g. call HermesService.executeTask(taskId)
+      const agent = await AIAgent.findById(task.agentId);
+
+      // Delegation to execution engine based on provider
+      if (agent && agent.provider === 'hermes') {
+          const HermesService = require('./HermesService'); // Lazy load to avoid circular deps
+          return await HermesService.executeTask(task._id);
+      }
 
       return task;
   }

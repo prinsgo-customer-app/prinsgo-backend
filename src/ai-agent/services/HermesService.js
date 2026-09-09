@@ -1,4 +1,4 @@
-// Adapter for Hermes Agent
+// Real Adapter for Hermes Agent Runtime
 // Official repo: https://github.com/NousResearch/hermes-agent
 const AIProvider = require('../models/AIProvider');
 const AITask = require('../models/AITask');
@@ -9,14 +9,29 @@ class HermesService {
     if (!provider) return 'NOT_CONFIGURED';
     if (!provider.isEnabled) return 'DISABLED';
 
-    // We strictly enforce BLOCKED if the runtime or API Keys are missing.
-    // The official Hermes Agent requires an LLM API key (like OPENAI_API_KEY or OPENROUTER_API_KEY)
-    // to process inference. Without it, the hermes process errors immediately.
-    if (!process.env.HERMES_BASE_URL && !process.env.OPENAI_API_KEY && !process.env.OPENROUTER_API_KEY) {
-      return 'BLOCKED'; // Missing runtime or LLM inference credentials
+    const baseUrl = process.env.HERMES_BASE_URL;
+    if (!baseUrl) {
+      return 'NOT_CONFIGURED';
     }
 
-    return provider.status;
+    try {
+      // Real health check to the Hermes RPC/REST runtime
+      const response = await fetch(`${baseUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Authorization': process.env.HERMES_API_KEY ? `Bearer ${process.env.HERMES_API_KEY}` : ''
+        }
+      });
+
+      if (response.ok) {
+        return 'CONNECTED';
+      } else {
+        return 'ERROR';
+      }
+    } catch (error) {
+      // Server is unreachable
+      return 'ERROR';
+    }
   }
 
   async executeTask(taskId) {
@@ -31,16 +46,48 @@ class HermesService {
          throw new Error(`Hermes runtime is ${status}`);
      }
 
-     // The deployment of Hermes Runtime failed in this environment because it strictly requires
-     // external LLM provider API credentials (e.g. OPENAI_API_KEY) to start and execute tasks successfully.
-     // Without these credentials, we cannot perform a real end-to-end execution.
-     // According to the instruction: "If deployment cannot be performed in the current environment,
-     // STOP and clearly report what external deployment/credential/network setup is required. Never fake the result."
-
-     task.status = 'FAILED';
-     task.error = { message: "Hermes execution cannot be performed. Real Hermes Runtime requires external LLM Provider API Keys (OPENAI_API_KEY, OPENROUTER_API_KEY) which are missing in this environment." };
+     task.status = 'RUNNING';
      await task.save();
-     throw new Error(task.error.message);
+
+     const baseUrl = process.env.HERMES_BASE_URL;
+
+     try {
+         // Real HTTP call to the Hermes Runtime.
+         // This assumes the runtime supports a chat/completions or task execution endpoint
+         // as per standard LLM/Agent interfaces (e.g. OpenAI compatible or custom Hermes REST).
+         const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': process.env.HERMES_API_KEY ? `Bearer ${process.env.HERMES_API_KEY}` : ''
+             },
+             body: JSON.stringify({
+                 model: "hermes", // Depending on Hermes configuration
+                 messages: [
+                     { role: "system", content: "You are Hermes, an autonomous agent." },
+                     { role: "user", content: task.instructions }
+                 ]
+             })
+         });
+
+         if (!response.ok) {
+             throw new Error(`Hermes Runtime returned status ${response.status}: ${await response.text()}`);
+         }
+
+         const data = await response.json();
+
+         // Successfully received real data
+         task.status = 'COMPLETED';
+         task.result = data;
+         await task.save();
+         return task;
+
+     } catch (error) {
+         task.status = 'FAILED';
+         task.error = { message: error.message };
+         await task.save();
+         throw error;
+     }
   }
 }
 
