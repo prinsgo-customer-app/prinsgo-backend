@@ -16,6 +16,7 @@ class HermesService {
 
     try {
       // Real health check to the Hermes RPC/REST runtime
+      // Validated against hermes-agent gateway API Server implementation which explicitly registers /health
       const response = await fetch(`${baseUrl}/health`, {
         method: 'GET',
         headers: {
@@ -53,8 +54,7 @@ class HermesService {
 
      try {
          // Real HTTP call to the Hermes Runtime.
-         // This assumes the runtime supports a chat/completions or task execution endpoint
-         // as per standard LLM/Agent interfaces (e.g. OpenAI compatible or custom Hermes REST).
+         // Validated against hermes-agent gateway API Server implementation which explicitly registers /v1/chat/completions
          const response = await fetch(`${baseUrl}/v1/chat/completions`, {
              method: 'POST',
              headers: {
