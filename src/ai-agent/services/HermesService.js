@@ -62,7 +62,7 @@ class HermesService {
                  'Authorization': process.env.HERMES_API_KEY ? `Bearer ${process.env.HERMES_API_KEY}` : ''
              },
              body: JSON.stringify({
-                 model: "hermes", // Depending on Hermes configuration
+                 model: task.executionMetadata?.routing?.provider?.config?.model || "opencode-free", // Ensure opencode-free model is used as fallback
                  messages: [
                      { role: "system", content: "You are Hermes, an autonomous agent." },
                      { role: "user", content: task.instructions }

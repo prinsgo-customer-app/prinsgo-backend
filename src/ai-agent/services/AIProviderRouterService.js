@@ -50,6 +50,10 @@ class AIProviderRouterService {
         // Hermes acts as a gateway that natively supports keyless opencode-free routing.
         const hermesProvider = providers.find(prov => prov.providerType === 'hermes');
         if (hermesProvider) {
+            // Ensure config sets the model correctly for OpenCode free fallback
+            if (!hermesProvider.config) hermesProvider.config = {};
+            if (!hermesProvider.config.model) hermesProvider.config.model = 'opencode-free';
+
             // Must verify ACTUAL Hermes runtime health
             const hermesStatus = await HermesService.getStatus(workspaceId);
             if (hermesStatus === 'CONNECTED') {
