@@ -9,28 +9,67 @@ class AIProviderService {
     const provider = await AIProvider.findById(providerId);
     if (!provider) throw new Error('Provider not found');
 
-    // Abstract check for keys in env.
+    // Real API Validation Instead of Fake Stubbing
     // We do NOT expose keys to frontend. We use backend env vars.
     let status = 'NOT_CONFIGURED';
     let isConnected = false;
 
     try {
-      if (provider.providerType === 'google' && process.env.GEMINI_API_KEY) {
-        status = 'CONNECTED';
-        isConnected = true;
-      } else if (provider.providerType === 'openai' && process.env.OPENAI_API_KEY) {
-        status = 'CONNECTED';
-        isConnected = true;
-      } else if (provider.providerType === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
-        status = 'CONNECTED';
-        isConnected = true;
-      } else if (provider.providerType === 'hermes' && process.env.HERMES_API_KEY && process.env.HERMES_BASE_URL) {
-        // Here we'd ideally make a real ping to HERMES_BASE_URL
-        status = 'CONNECTED';
-        isConnected = true;
+      if (provider.providerType === 'google') {
+          if (!process.env.GEMINI_API_KEY) {
+              status = 'NOT_CONFIGURED';
+          } else {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+              isConnected = res.ok;
+              status = isConnected ? 'CONNECTED' : 'ERROR';
+          }
+      } else if (provider.providerType === 'openai') {
+          if (!process.env.OPENAI_API_KEY) {
+              status = 'NOT_CONFIGURED';
+          } else {
+              const res = await fetch(`https://api.openai.com/v1/models`, {
+                  headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }
+              });
+              isConnected = res.ok;
+              status = isConnected ? 'CONNECTED' : 'ERROR';
+          }
+      } else if (provider.providerType === 'anthropic') {
+          if (!process.env.ANTHROPIC_API_KEY) {
+              status = 'NOT_CONFIGURED';
+          } else {
+              // Anthropic doesn't have a simple models endpoint that doesn't cost tokens for a simple ping,
+              // but we can simulate a ping by creating a tiny invalid request and expecting a specific 400 error rather than 401 Unauthorized
+              const res = await fetch(`https://api.anthropic.com/v1/messages`, {
+                  method: 'POST',
+                  headers: {
+                      'x-api-key': process.env.ANTHROPIC_API_KEY,
+                      'anthropic-version': '2023-06-01',
+                      'content-type': 'application/json'
+                  },
+                  body: JSON.stringify({ max_tokens: 1, messages: [] })
+              });
+              // 400 Bad Request means key is valid but request is bad. 401 means invalid key.
+              isConnected = res.status !== 401 && res.status !== 403;
+              status = isConnected ? 'CONNECTED' : 'ERROR';
+          }
+      } else if (provider.providerType === 'hermes') {
+        const HermesService = require('./HermesService');
+        // Let HermesService perform the real HTTP ping check to strictly enforce honesty
+        status = await HermesService.getStatus(provider.workspaceId);
+        isConnected = status === 'CONNECTED';
       } else if (provider.providerType === 'custom') {
-         status = 'CONNECTED';
-         isConnected = true;
+          if (!provider.config || !provider.config.baseUrl) {
+              status = 'NOT_CONFIGURED';
+          } else {
+              try {
+                  const res = await fetch(provider.config.baseUrl);
+                  isConnected = res.ok;
+                  status = isConnected ? 'CONNECTED' : 'ERROR';
+              } catch(e) {
+                  status = 'ERROR';
+                  isConnected = false;
+              }
+          }
       } else {
          status = 'NOT_CONFIGURED';
       }
@@ -41,7 +80,7 @@ class AIProviderService {
 
       provider.status = status;
       provider.lastTestedAt = new Date();
-      provider.lastError = isConnected ? null : 'Missing required API keys or configuration';
+      provider.lastError = isConnected ? null : 'Missing required API keys, unreachable URL, or invalid configuration';
 
       await provider.save();
       return provider;

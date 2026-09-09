@@ -8,7 +8,7 @@ const aiTaskSchema = new mongoose.Schema(
     instructions: { type: String, required: true },
     status: {
       type: String,
-      enum: ['QUEUED', 'WAITING_FOR_APPROVAL', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'],
+      enum: ['QUEUED', 'WAITING_FOR_APPROVAL', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'BLOCKED'],
       default: 'QUEUED',
     },
     requiredPermissions: [{ type: String }],
