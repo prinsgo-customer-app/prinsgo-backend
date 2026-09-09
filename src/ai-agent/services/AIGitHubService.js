@@ -24,9 +24,25 @@ class AIGitHubService {
          integration.status = 'NOT_CONFIGURED';
          integration.lastError = "Missing GITHUB_TOKEN";
       } else {
-         // Here we would test github api
-         integration.status = 'CONNECTED';
-         integration.lastError = null;
+         try {
+            // Real network validation against GitHub API
+            const response = await fetch('https://api.github.com/user', {
+               headers: {
+                  'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+                  'User-Agent': 'PrinsGo-AI-Agent-Backend'
+               }
+            });
+            if (response.ok) {
+               integration.status = 'CONNECTED';
+               integration.lastError = null;
+            } else {
+               integration.status = 'ERROR';
+               integration.lastError = `GitHub API returned ${response.status}`;
+            }
+         } catch (error) {
+            integration.status = 'ERROR';
+            integration.lastError = error.message;
+         }
       }
 
       integration.lastTestedAt = new Date();
