@@ -42,6 +42,10 @@ const verifyOtp = async (phone, code, purpose = 'login') => {
 // Send OTP via SMS gateway (uses OTP_API_KEY-based provider, e.g. MSG91/Fast2SMS style REST API)
 const sendOtpSms = async (phone, code) => {
   if (!process.env.OTP_API_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('OTP_API_KEY is missing in production configuration.');
+      return false;
+    }
     // Dev fallback - log to console instead of failing silently
     console.log(`[DEV OTP] Sending OTP ${code} to ${phone}`);
     return true;

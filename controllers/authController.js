@@ -19,11 +19,21 @@ const sendOtp = async (req, res, next) => {
     // OTP Generate
     const code = await createOtp(phone, "login");
 
-    // SMS Send (optional)
+    // SMS Send
     try {
-      await sendOtpSms(phone, code);
+      const sent = await sendOtpSms(phone, code);
+      if (!sent) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to send OTP. Please try again later.",
+        });
+      }
     } catch (e) {
-      console.log("SMS not sent, using test OTP:", code);
+      console.error("SMS send exception:", e.message);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP. Please try again later.",
+      });
     }
 
     return res.status(200).json({
