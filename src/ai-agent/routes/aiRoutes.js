@@ -11,6 +11,8 @@ router.use(protectAIUser);
 
 // Workspace Management (doesn't require a specific workspace in URL)
 router.post('/workspaces', aiSystemController.createWorkspace);
+router.get('/workspaces/current', aiSystemController.getCurrentWorkspace);
+router.get('/workspaces', aiSystemController.getWorkspaces);
 
 // System Status
 router.get('/workspaces/:workspaceId/status', requireWorkspaceAccess, aiSystemController.getSystemStatus);
@@ -33,6 +35,16 @@ router.patch('/workspaces/:workspaceId/agents/:agentId/toggle',
 );
 
 // Tasks
+router.get('/workspaces/:workspaceId/tasks',
+    requireWorkspaceAccess,
+    requireAIPermission('AI_TASK_VIEW'),
+    aiTaskController.getTasks
+);
+router.get('/workspaces/:workspaceId/tasks/:taskId',
+    requireWorkspaceAccess,
+    requireAIPermission('AI_TASK_VIEW'),
+    aiTaskController.getTaskDetails
+);
 router.post('/workspaces/:workspaceId/tasks',
     requireWorkspaceAccess,
     requireAIPermission('AI_TASK_CREATE'),
@@ -45,6 +57,16 @@ router.post('/workspaces/:workspaceId/tasks/:taskId/execute',
 );
 
 // Approvals
+router.get('/workspaces/:workspaceId/approvals',
+    requireWorkspaceAccess,
+    requireAIPermission('AI_APPROVAL_VIEW'),
+    aiTaskController.getApprovals
+);
+router.get('/workspaces/:workspaceId/approvals/:approvalId',
+    requireWorkspaceAccess,
+    requireAIPermission('AI_APPROVAL_VIEW'),
+    aiTaskController.getApprovalDetails
+);
 router.post('/workspaces/:workspaceId/approvals/:approvalId/resolve',
     requireWorkspaceAccess,
     requireAIPermission('AI_APPROVAL_APPROVE'), // Simplified, ideally checks both APPROVE and REJECT based on body
@@ -66,7 +88,8 @@ router.post('/workspaces/:workspaceId/providers/:providerId/test', requireWorksp
 
 // Memory
 router.post('/workspaces/:workspaceId/memory', requireWorkspaceAccess, requireAIPermission('AI_MEMORY_MANAGE'), aiMemoryController.createMemory);
-router.get('/workspaces/:workspaceId/memory', requireWorkspaceAccess, requireAIPermission('AI_MEMORY_VIEW'), aiMemoryController.searchMemory);
+router.get('/workspaces/:workspaceId/memory', requireWorkspaceAccess, requireAIPermission('AI_MEMORY_VIEW'), aiMemoryController.getMemories);
+router.get('/workspaces/:workspaceId/memory/search', requireWorkspaceAccess, requireAIPermission('AI_MEMORY_VIEW'), aiMemoryController.searchMemory);
 router.delete('/workspaces/:workspaceId/memory/:memoryId', requireWorkspaceAccess, requireAIPermission('AI_MEMORY_MANAGE'), aiMemoryController.deleteMemory);
 
 // GitHub / Repositories

@@ -18,6 +18,18 @@ const createMemory = async (req, res) => {
     }
 };
 
+const getMemories = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const { query } = req.query;
+        const result = await AIMemoryService.getMemories(req.workspace._id, page, limit, query);
+        res.status(200).json({ success: true, data: result.memories, pagination: { total: result.total, page: result.page, pages: result.pages } });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
 const searchMemory = async (req, res) => {
     try {
         const { query } = req.query;
@@ -38,4 +50,4 @@ const deleteMemory = async (req, res) => {
     }
 };
 
-module.exports = { createMemory, searchMemory, deleteMemory };
+module.exports = { createMemory, getMemories, searchMemory, deleteMemory };

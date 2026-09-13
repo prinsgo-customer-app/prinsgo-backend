@@ -19,7 +19,9 @@ const getSystemStatus = async (req, res) => {
                 providers: providers.map(p => ({ type: p.providerType, status: p.status })),
                 hermes: hermesStatus,
                 github: githubStatus,
-                googleDrive: 'NOT_CONFIGURED' // stub
+                googleDrive: 'NOT_CONFIGURED',
+                files: 'READY', // Since file metadata basic operations are implemented in aiFileController
+                memory: 'READY'
             }
         });
     } catch (error) {
@@ -37,7 +39,27 @@ const createWorkspace = async (req, res) => {
     }
 };
 
+const getCurrentWorkspace = async (req, res) => {
+    try {
+        const workspace = await AIWorkspaceService.getCurrentWorkspace(req.user._id);
+        res.status(200).json({ success: true, data: workspace });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+const getWorkspaces = async (req, res) => {
+    try {
+        const workspaces = await AIWorkspaceService.getUserWorkspaces(req.user._id);
+        res.status(200).json({ success: true, data: workspaces });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getSystemStatus,
-    createWorkspace
+    createWorkspace,
+    getCurrentWorkspace,
+    getWorkspaces
 };

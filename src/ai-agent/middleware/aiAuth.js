@@ -74,7 +74,7 @@ const requireAIPermission = (requiredPermission) => {
 
     const adminPermissions = [
       'AI_AGENT_VIEW', 'AI_AGENT_CREATE', 'AI_AGENT_UPDATE', 'AI_AGENT_DELETE',
-      'AI_TASK_CREATE', 'AI_TASK_EXECUTE', 'AI_TASK_CANCEL',
+      'AI_TASK_CREATE', 'AI_TASK_EXECUTE', 'AI_TASK_CANCEL', 'AI_TASK_VIEW',
       'AI_APPROVAL_VIEW', 'AI_APPROVAL_APPROVE', 'AI_APPROVAL_REJECT',
       'AI_MEMORY_VIEW', 'AI_MEMORY_MANAGE', 'AI_REPOSITORY_VIEW', 'AI_REPOSITORY_MANAGE',
       'AI_CODE_ANALYSIS', 'AI_CODE_MODIFICATION', 'AI_GITHUB_READ', 'AI_GITHUB_WRITE',
@@ -82,7 +82,9 @@ const requireAIPermission = (requiredPermission) => {
     ];
 
     const customerPermissions = [
-      'AI_AGENT_VIEW', 'AI_TASK_CREATE', 'AI_TASK_EXECUTE', 'AI_MEMORY_VIEW', 'AI_MEMORY_MANAGE'
+      'AI_AGENT_VIEW', 'AI_TASK_CREATE', 'AI_TASK_EXECUTE', 'AI_TASK_VIEW',
+      'AI_APPROVAL_VIEW', 'AI_APPROVAL_APPROVE', 'AI_APPROVAL_REJECT',
+      'AI_MEMORY_VIEW', 'AI_MEMORY_MANAGE'
     ];
 
     let userPermissions = [];
