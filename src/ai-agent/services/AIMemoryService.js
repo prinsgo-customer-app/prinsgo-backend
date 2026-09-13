@@ -19,13 +19,34 @@ class AIMemoryService {
        return AIMemory.findOne({ workspaceId, key, type });
    }
 
+   async getMemories(workspaceId, page = 1, limit = 10, query = '') {
+       const skip = (page - 1) * limit;
+       const filter = { workspaceId };
+
+       if (query) {
+           filter.$or = [
+               { key: { $regex: query, $options: 'i' } },
+               { type: { $regex: query, $options: 'i' } }
+           ];
+       }
+
+       const memories = await AIMemory.find(filter)
+           .sort({ createdAt: -1 })
+           .skip(skip)
+           .limit(limit);
+
+       const total = await AIMemory.countDocuments(filter);
+       return { memories, total, page, pages: Math.ceil(total / limit) };
+   }
+
    async searchMemory(workspaceId, query) {
        // In a full implementation, this might use MongoDB text search or vector search.
-       // For this baseline, we provide basic pattern matching on key/content strings.
+       // For this baseline, we provide basic pattern matching on key/type strings.
        return AIMemory.find({
            workspaceId,
            $or: [
-               { key: { $regex: query, $options: 'i' } }
+               { key: { $regex: query, $options: 'i' } },
+               { type: { $regex: query, $options: 'i' } }
            ]
        });
    }

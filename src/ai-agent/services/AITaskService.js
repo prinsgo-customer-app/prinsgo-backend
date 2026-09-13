@@ -5,6 +5,25 @@ const AIAuditLog = require('../models/AIAuditLog');
 const AIProviderRouterService = require('./AIProviderRouterService');
 
 class AITaskService {
+  async getTasks(workspaceId, page = 1, limit = 10) {
+      const skip = (page - 1) * limit;
+      const tasks = await AITask.find({ workspaceId })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate('agentId', 'name provider model');
+      const total = await AITask.countDocuments({ workspaceId });
+      return { tasks, total, page, pages: Math.ceil(total / limit) };
+  }
+
+  async getTaskDetails(taskId, workspaceId) {
+      const task = await AITask.findOne({ _id: taskId, workspaceId })
+          .populate('agentId', 'name provider model')
+          .populate('approvalId');
+      if (!task) throw new Error("Task not found");
+      return task;
+  }
+
   async createTask(workspaceId, creatorId, agentId, instructions, requiresApproval, requiredPermissions) {
       const agent = await AIAgent.findOne({ _id: agentId, workspaceId });
       if(!agent) throw new Error("Agent not found or does not belong to this workspace");

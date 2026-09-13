@@ -18,6 +18,14 @@ class AIWorkspaceService {
     async getUserWorkspaces(userId) {
         return AIWorkspace.find({ owner: userId, isActive: true });
     }
+
+    async getCurrentWorkspace(userId) {
+        let workspace = await AIWorkspace.findOne({ owner: userId, isActive: true }).sort({ createdAt: 1 });
+        if (!workspace) {
+            workspace = await this.createWorkspace(userId, 'Default Workspace', 'My primary workspace');
+        }
+        return workspace;
+    }
 }
 
 module.exports = new AIWorkspaceService();
