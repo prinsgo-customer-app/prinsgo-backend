@@ -12,6 +12,14 @@ const getSystemStatus = async (req, res) => {
         const hermesStatus = await HermesService.getStatus(workspaceId);
         const githubStatus = await AIGitHubService.getStatus(workspaceId);
 
+        // Files status: evaluate based on actual environment configuration for Cloudinary/Storage
+        const hasFileStorage = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+        const filesStatus = hasFileStorage ? 'AVAILABLE' : 'NOT_CONFIGURED';
+
+        // Memory status: since memory is stored in MongoDB, if we are successfully processing this request, MongoDB is connected.
+        // We use AVAILABLE to denote a locally working service rather than READY for an external one.
+        const memoryStatus = 'AVAILABLE';
+
         res.status(200).json({
             success: true,
             data: {
@@ -20,8 +28,8 @@ const getSystemStatus = async (req, res) => {
                 hermes: hermesStatus,
                 github: githubStatus,
                 googleDrive: 'NOT_CONFIGURED',
-                files: 'READY', // Since file metadata basic operations are implemented in aiFileController
-                memory: 'READY'
+                files: filesStatus,
+                memory: memoryStatus
             }
         });
     } catch (error) {

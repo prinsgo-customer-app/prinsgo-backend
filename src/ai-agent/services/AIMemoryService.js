@@ -25,7 +25,8 @@ class AIMemoryService {
 
        if (query) {
            filter.$or = [
-               { key: { $regex: query, $options: 'i' } }
+               { key: { $regex: query, $options: 'i' } },
+               { type: { $regex: query, $options: 'i' } }
            ];
        }
 
@@ -40,11 +41,12 @@ class AIMemoryService {
 
    async searchMemory(workspaceId, query) {
        // In a full implementation, this might use MongoDB text search or vector search.
-       // For this baseline, we provide basic pattern matching on key/content strings.
+       // For this baseline, we provide basic pattern matching on key/type strings.
        return AIMemory.find({
            workspaceId,
            $or: [
-               { key: { $regex: query, $options: 'i' } }
+               { key: { $regex: query, $options: 'i' } },
+               { type: { $regex: query, $options: 'i' } }
            ]
        });
    }

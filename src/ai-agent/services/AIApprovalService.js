@@ -53,8 +53,8 @@ class AIApprovalService {
       return approval;
   }
 
-  async resolveApproval(approvalId, resolvedById, status, reason) {
-      const approval = await AIApproval.findById(approvalId);
+  async resolveApproval(approvalId, workspaceId, resolvedById, status, reason) {
+      const approval = await AIApproval.findOne({ _id: approvalId, workspaceId });
       if(!approval) throw new Error("Approval not found");
       if(approval.status !== 'PENDING') throw new Error("Approval is already resolved");
 

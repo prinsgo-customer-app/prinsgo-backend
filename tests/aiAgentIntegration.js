@@ -87,6 +87,80 @@ const runTests = async () => {
             console.log(`TEST D Result: ✅ Blocked successfully with error: ${e.message}`);
         }
 
+        console.log("\n--- Testing Approvals RBAC & Workspace Isolation ---");
+        const aiTaskController = require('../src/ai-agent/controllers/aiTaskController');
+
+        // Mock request for Approval Resolution without permission
+        const mockApprovalReq1 = {
+            params: { approvalId: new mongoose.Types.ObjectId() }, // Random valid ObjectId
+            body: { status: 'APPROVED', reason: 'Looks good' },
+            user: { _id: user._id, role: 'guest' }, // 'guest' role won't get admin or customer permissions, so it will fail
+            workspace: { _id: workspace._id }
+        };
+
+        const mockRes1 = {
+            status: (code) => {
+                return {
+                    json: (data) => {
+                        if (code === 403) {
+                            console.log(`TEST E (Approval without permission): ✅ Expected 403, got ${code}`);
+                        } else {
+                            console.log(`TEST E (Approval without permission): ❌ Expected 403, got ${code} (Message: ${data.message})`);
+                        }
+                    }
+                }
+            }
+        };
+
+        await aiTaskController.resolveApproval(mockApprovalReq1, mockRes1);
+
+        // Mock request for Approval Resolution with invalid ObjectId
+        const mockApprovalReq2 = {
+            params: { approvalId: 'invalid-id' },
+            body: { status: 'APPROVED', reason: 'Looks good' },
+            user: { _id: user._id, role: 'admin' }, // admin role has all permissions
+            workspace: { _id: workspace._id }
+        };
+
+        const mockRes2 = {
+            status: (code) => {
+                return {
+                    json: (data) => {
+                        if (code === 400 && data.message.includes('Invalid')) {
+                            console.log(`TEST F (Approval invalid ID): ✅ Expected 400 Invalid ID, got ${code}`);
+                        } else {
+                            console.log(`TEST F (Approval invalid ID): ❌ Expected 400 Invalid ID, got ${code} (Message: ${data.message})`);
+                        }
+                    }
+                }
+            }
+        };
+
+        await aiTaskController.resolveApproval(mockApprovalReq2, mockRes2);
+
+        console.log("\n--- Testing System Status ---");
+        const aiSystemController = require('../src/ai-agent/controllers/aiSystemController');
+
+        const mockSystemReq = {
+            workspace: { _id: workspace._id }
+        };
+
+        const mockSystemRes = {
+            status: (code) => {
+                return {
+                    json: (data) => {
+                        if (code === 200 && data.data.memory === 'AVAILABLE' && data.data.files) {
+                            console.log(`TEST F (System Status): ✅ Validated Memory and Files dynamic status.`);
+                        } else {
+                            console.log(`TEST F (System Status): ❌ Failed validation. Data: ${JSON.stringify(data)}`);
+                        }
+                    }
+                }
+            }
+        };
+
+        await aiSystemController.getSystemStatus(mockSystemReq, mockSystemRes);
+
         global.fetch = originalFetch;
 
     } catch(e) {

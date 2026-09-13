@@ -69,7 +69,6 @@ router.get('/workspaces/:workspaceId/approvals/:approvalId',
 );
 router.post('/workspaces/:workspaceId/approvals/:approvalId/resolve',
     requireWorkspaceAccess,
-    requireAIPermission('AI_APPROVAL_APPROVE'), // Simplified, ideally checks both APPROVE and REJECT based on body
     aiTaskController.resolveApproval
 );
 
