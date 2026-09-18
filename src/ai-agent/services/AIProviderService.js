@@ -106,7 +106,7 @@ class AIProviderService {
       }
 
       await provider.save();
-      await this.testConnection(provider._id);
+      provider = await this.testConnection(provider._id); // testConnection returns the updated document
       return provider;
   }
 }

@@ -46,6 +46,8 @@ const {
   broadcastNotification,
   getNotificationHistory,
 } = require('../controllers/adminNotificationController');
+const { configureWorkspaceProvider } = require('../controllers/adminAIController');
+const { requireWorkspaceAccess, requireAIPermission } = require('../src/ai-agent/middleware/aiAuth');
 const {
   createCoupon,
   listCoupons,
@@ -147,5 +149,8 @@ router.post('/support/tickets/:id/replies', adminReplyToTicket);
 // Notifications
 router.post('/notifications/broadcast', broadcastNotification);
 router.get('/notifications/history', getNotificationHistory);
+
+// AI Agent Admin Controls
+router.post('/ai/workspaces/:workspaceId/providers/configure', requireWorkspaceAccess, requireAIPermission('AI_PROVIDER_MANAGE'), configureWorkspaceProvider);
 
 module.exports = router;
