@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const AIProviderService = require('../services/AIProviderService');
 const HermesService = require('../services/HermesService');
 const AIGitHubService = require('../services/AIGitHubService');
@@ -14,11 +15,10 @@ const getSystemStatus = async (req, res) => {
 
         // Files status: evaluate based on actual environment configuration for Cloudinary/Storage
         const hasFileStorage = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
-        const filesStatus = hasFileStorage ? 'AVAILABLE' : 'NOT_CONFIGURED';
+        const filesStatus = hasFileStorage ? 'CONNECTED' : 'NOT_CONFIGURED';
 
-        // Memory status: since memory is stored in MongoDB, if we are successfully processing this request, MongoDB is connected.
-        // We use AVAILABLE to denote a locally working service rather than READY for an external one.
-        const memoryStatus = 'AVAILABLE';
+        // Memory status: realistically evaluate MongoDB connection state
+        const memoryStatus = mongoose.connection.readyState === 1 ? 'CONNECTED' : 'ERROR';
 
         res.status(200).json({
             success: true,
